@@ -1,0 +1,49 @@
+paths:
+  /api/events/{id}/tickets:
+    post:
+      summary: Purchase ticket for event
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketPurchase'
+      responses:
+        '201':
+          description: Payment initialized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentInitResponse'
+        '400':
+          description: Event sold out or invalid
+
+  /api/tickets/verify:
+    get:
+      summary: Verify ticket QR code (staff endpoint)
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+      security:
+        - staffApiKey: []
+      responses:
+        '200':
+          description: Valid ticket
+        '404':
+          description: Invalid/expired token
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    staffApiKey:
+      type: apiKey
+      in: header
+      name: X-Staff-API-Key

@@ -1,0 +1,139 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  role      Role     @default(EVENTEE)
+  firstName String?
+  lastName  String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdEvents Event[]    @relation("EventCreator")
+  tickets       Ticket[]
+  reminders     Reminder[]
+
+  @@map("users")
+}
+
+model Event {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  startTime   DateTime
+  endTime     DateTime
+  location    String
+  capacity    Int
+  price       Decimal  @default(0)
+  status      EventStatus @default(DRAFT)
+  creatorId   String
+  creator     User     @relation("EventCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tickets  Ticket[]
+  payments Payment[]
+  reminders Reminder[]
+
+  @@index([creatorId])
+  @@index([status])
+  @@map("events")
+}
+
+model Ticket {
+  id        String   @id @default(uuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status    TicketStatus @default(PENDING)
+  qrToken   String   @unique
+  qrCode    String?  // Base64 encoded QR image
+  scannedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  payment Payment?
+
+  @@index([eventId])
+  @@index([userId])
+  @@index([qrToken])
+  @@map("tickets")
+}
+
+model Payment {
+  id                String   @id @default(uuid())
+  ticketId          String   @unique
+  ticket            Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  eventId           String
+  event             Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  amount            Decimal
+  currency          String   @default("NGN")
+  status            PaymentStatus @default(PENDING)
+  paystackReference String? @unique
+  paystackData      Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([eventId])
+  @@index([paystackReference])
+  @@index([status])
+  @@map("payments")
+}
+
+model Reminder {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  remindAt  DateTime
+  sent      Boolean  @default(false)
+  type      ReminderType @default(USER)
+  createdAt DateTime @default(now())
+
+  @@index([remindAt])
+  @@index([userId, eventId])
+  @@unique([userId, eventId, remindAt])
+  @@map("reminders")
+}
+
+enum Role {
+  CREATOR
+  EVENTEE
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  COMPLETED
+}
+
+enum TicketStatus {
+  PENDING
+  PAID
+  SCANNED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum ReminderType {
+  CREATOR
+  USER
+}

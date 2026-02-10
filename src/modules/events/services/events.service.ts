@@ -1,34 +1,61 @@
 import { prisma } from '../../../config/database';
 import redis from '../../../config/redis';
 import { BadRequestError, NotFoundError, ForbiddenError } from '../../../core/errors/AppError';
-import { CreateEventData, UpdateEventData } from '../../../shared/types';
+
+export interface CreateEventData {
+  title: string;
+  description?: string;
+  startTime: string | Date;  
+  endTime: string | Date;    
+  location: string;
+  capacity: number;
+  price: number;
+  reminders?: string[];
+}
+
+export interface UpdateEventData {
+  title?: string;
+  description?: string;
+  startTime?: string | Date;
+  endTime?: string | Date;
+  location?: string;
+  capacity?: number;
+  price?: number;
+  status?: 'DRAFT' | 'PUBLISHED' | 'CANCELLED' | 'COMPLETED';
+}
 
 
 export class EventsService {
-  private static readonly CACHE_TTL = 60 * 10; // 10 minutes
+  private static readonly CACHE_TTL = 60 * 10; 
 
   async createEvent(userId: string, data: CreateEventData) {
+
+    const startTime = new Date(data.startTime);
+    const endTime = new Date(data.endTime);
     
-    if (data.startTime >= data.endTime) {
-      throw new BadRequestError('End time must be after start time');
-    }
+     if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
+    throw new BadRequestError('Invalid date format. Use ISO 8601 format (YYYY-MM-DDTHH:mm)');
+  }
 
-    if (data.startTime.getTime() < Date.now()) {
-      throw new BadRequestError('Start time must be in the future');
-    }
+  if (startTime >= endTime) {
+    throw new BadRequestError('End time must be after start time');
+  }
 
+  if (startTime.getTime() < Date.now()) {
+    throw new BadRequestError('Start time must be in the future');
+  }
 
     const event = await prisma.event.create({
       data: {
         title: data.title,
         description: data.description,
-        startTime: data.startTime,
-        endTime: data.endTime,
+        startTime: startTime,
+        endTime: endTime,
         location: data.location,
         capacity: data.capacity,
         price: data.price || 0,
+        status: 'DRAFT',
         creatorId: userId,
-        status: 'DRAFT'
       }
     });
 

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { PaystackService } from '../services/paystack.service';
 import { AuthRequest } from '../../../shared/types';
+import { BadRequestError } from '../../../core/errors/AppError';
 
 const paystackService = new PaystackService();
 
@@ -28,11 +29,20 @@ export const verifyPayment = async (req: Request, res: Response, next: NextFunct
   try {
     const { reference } = req.query;
     
-    const result = await paystackService.verifyPayment(reference as string);
+    if (!reference) {
+      throw new BadRequestError('Payment reference is required');
+    }
+
+    const paystackData = await paystackService.verifyPayment(reference as string);
 
     res.json({
       success: true,
-      data: result
+      data: {
+        status: paystackData.status,
+        reference: paystackData.reference,
+        amount: paystackData.amount,
+        gateway_response: paystackData.gateway_response,
+      }
     });
   } catch (error) {
     next(error);
@@ -41,14 +51,13 @@ export const verifyPayment = async (req: Request, res: Response, next: NextFunct
 
 export const handleWebhook = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const signature = req.headers['x-paystack-signature'] as string;
+    const event = req.body;
     
-    const result = await paystackService.handleWebhook(req.body, signature);
-
-    res.json({
-      success: true,
-      data: result
-    });
+    if (event.event === 'charge.success') {
+      await paystackService.verifyPayment(event.data.reference);
+    }
+    
+    res.status(200).json({ success: true });
   } catch (error) {
     next(error);
   }

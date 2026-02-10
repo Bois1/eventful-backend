@@ -5,8 +5,8 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "npm install && prisma generate && tsc",
-    "start":"npm run migrate:deploy && node dist/server.js",
+    "build": "prisma generate && tsc",
+    "start": "node dist/server.js",
     "migrate:deploy": "prisma migrate deploy",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
+    "@types/node": "^20.10.6", 
     "argon2": "^0.44.0",
     "axios": "^1.6.2",
     "bcryptjs": "^2.4.3",
@@ -58,7 +59,6 @@
     "@types/jsonwebtoken": "^9.0.5",
     "@types/morgan": "^1.9.9",
     "@types/multer": "^1.4.11",
-    "@types/node": "^20.10.6",
     "@types/nodemailer": "^6.4.14",
     "@types/qrcode": "^1.5.5",
     "@types/rate-limit-redis": "^1.0.0",
@@ -79,13 +79,12 @@
     "ts-jest": "^29.4.6",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3"
+
   },
   "jest": {
     "preset": "ts-jest",
     "testEnvironment": "node",
-    "roots": [
-      "<rootDir>/tests"
-    ],
+    "roots": ["<rootDir>/tests"],
     "coverageDirectory": "coverage",
     "collectCoverageFrom": [
       "src/**/*.{ts,tsx}",
@@ -93,8 +92,6 @@
       "!src/server.ts",
       "!src/app.ts"
     ],
-    "setupFilesAfterEnv": [
-      "<rootDir>/tests/jest.setup.ts"
-    ]
+    "setupFilesAfterEnv": ["<rootDir>/tests/jest.setup.ts"]
   }
 }

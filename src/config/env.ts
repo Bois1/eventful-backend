@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { logger } from '../core/logger/logger';
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -27,5 +28,25 @@ const envSchema = z.object({
   RATE_LIMIT_WINDOW_MS: z.string().default('900000'),
   RATE_LIMIT_MAX_REQUESTS: z.string().default('100'),
 });
+
+
+
+if (process.env.NODE_ENV === 'production') {
+  if (!process.env.PAYSTACK_SECRET_KEY?.startsWith('sk_live_')) {
+    logger.warn('WARNING: Using test Paystack keys in production environment!');
+  }
+} else {
+  if (!process.env.PAYSTACK_SECRET_KEY?.startsWith('sk_test_')) {
+    logger.warn('WARNING: Using live Paystack keys in development environment!');
+  }
+}
+
+
+if (!process.env.PAYSTACK_SECRET_KEY || !process.env.PAYSTACK_PUBLIC_KEY) {
+  throw new Error(
+    'Missing Paystack API keys. Set PAYSTACK_SECRET_KEY and PAYSTACK_PUBLIC_KEY in environment variables.'
+  );
+}
+
 
 export const env = envSchema.parse(process.env);
